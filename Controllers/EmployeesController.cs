@@ -17,8 +17,7 @@ namespace WebApplication1.Controllers
         
         public EmployeesController(EmplyoeeContext context)
         {
-            _context = context;
-            
+            _context = context; 
         }
 
         [HttpGet]
@@ -30,12 +29,18 @@ namespace WebApplication1.Controllers
 
             foreach (var employee in employees)
             {
-                if (!string.IsNullOrEmpty(employee.Hobbies))
+                if (!string.IsNullOrEmpty(employee.Hobbies))    //this checks if hobby of current employee is neither
+                                                                //null nor empty ,then execute the code
                 {
                     // Split the comma-separated hobby IDs
-                    var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();
+                    var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();  //Select(int.Parse) part
+                                                                                            //converts each of the split
+                                                                                            //strings into an integer (the ID of the hobby).
 
-                    // Fetch hobby names from TblHobbies table based on the hobby IDs
+
+                    //This query fetches the actual hobby names from the TblHobbies table in the database,
+                    //based on the hobby IDs.
+
                     var hobbies = await _context.TblHobbies
                         .Where(h => hobbyIds.Contains(h.HobbyId))
                         .ToListAsync();
@@ -127,6 +132,12 @@ namespace WebApplication1.Controllers
             else
             {
                 tblEmployee.Hobbies = ""; // If no hobbies, set it as an empty string
+            }
+
+            //update password
+            if (!string.IsNullOrEmpty(tblEmployee.password))
+            {
+                existingEmployee.password = BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
 
             // Update employee details
@@ -265,6 +276,15 @@ namespace WebApplication1.Controllers
                     return BadRequest($"Invalid HobbyId: {hobbyId}");
                 }
             }
+
+
+
+            //hashPassword Before saving
+            if (!string.IsNullOrEmpty(tblEmployee.password))
+            {
+                tblEmployee.password=BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
+            }
+
 
             // Add the employee to the database
             _context.TblEmployee.Add(tblEmployee);
