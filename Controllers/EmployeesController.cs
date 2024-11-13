@@ -277,20 +277,27 @@ namespace WebApplication1.Controllers
                 }
             }
 
-
-
             //hashPassword Before saving
             if (!string.IsNullOrEmpty(tblEmployee.password))
             {
                 tblEmployee.password=BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
 
-
             // Add the employee to the database
             _context.TblEmployee.Add(tblEmployee);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetTblEmployee", new { id = tblEmployee.Id }, tblEmployee);
+        }
+
+
+        [HttpPost("Login")]
+        public async Task<ActionResult> Login([FromBody] LoginModel login)
+        {
+
+
+
+
         }
 
 
