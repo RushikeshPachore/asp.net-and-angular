@@ -1,0 +1,11 @@
+# Ignore Visual Studio specific files
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Ignore build results
+bin/
+obj/
