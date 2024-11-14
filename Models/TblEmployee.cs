@@ -34,17 +34,9 @@ namespace WebApplication1.Models
 
         public string? Hobbies {  get; set; }
 
-        //[ForeignKey("Hobby")]
-        //public int? HobbyId { get; set; }
+        public string? password {  get; set; }  //"?" means it can be null
 
-        //public virtual TblHobbies? Hobby { get; set; }
-       // [NotMapped]
-        //public string? HobbyName => Hobby?.HobbyName;
-
-        //public List<int> Hobbies { get; set; }
-
-        // [JsonIgnore]
-        //  public ICollection<TblEmployeeHobby> EmployeeHobbies { get; set; } = new List<TblEmployeeHobby>();
+   
 
     }
 }

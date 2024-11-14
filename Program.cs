@@ -29,7 +29,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseCors("MyPolicy"); //should be before UseAuthorization and after UseHttpsRedirection
 
 app.UseAuthorization();
