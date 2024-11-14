@@ -113,7 +113,7 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-
+            
             // Validate hobbies
             if (!string.IsNullOrEmpty(tblEmployee.Hobbies))
             {
@@ -254,10 +254,23 @@ namespace WebApplication1.Controllers
             // Verify the password using bcrypt
             if (!BCrypt.Net.BCrypt.Verify(loginModel.password, employee.password))
             {
-                return Unauthorized("Invalid email or password.");
+                return Unauthorized(new { success = false, message = "Invalid email or password." });
             }
             // If the credentials are correct, return a success message
-            return Ok(new { Message = "Login successful", EmployeeId = employee.Id });
+
+
+           
+                return Ok(new
+                {
+                    success=true,
+                    userId=employee.Id,
+                    userName=$"{employee.Name} {employee.LastName}",
+                    email=employee.Email,
+                    message="Login Successfully Done"
+                });
+            
+
+            //return Ok(new { Message = "Login successful", EmployeeId = employee.Id });
         }
 
 
