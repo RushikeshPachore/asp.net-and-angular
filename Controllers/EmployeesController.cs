@@ -2,10 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Humanizer;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NuGet.Packaging.Signing;
 using WebApplication1.Models;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace WebApplication1.Controllers
 {
@@ -32,12 +38,10 @@ namespace WebApplication1.Controllers
                 if (!string.IsNullOrEmpty(employee.Hobbies))    //this checks if hobby of current employee is neither
                                                                 //null nor empty ,then execute the code
                 {
-                    // Split the comma-separated hobby IDs
+                    // Split the comma-separated hobby IDs. int.Parse=> "1" will be converted to the integer 1.
                     var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();  //Select(int.Parse) part
                                                                                             //converts each of the split
                                                                                             //strings into an integer (the ID of the hobby).
-
-
                     //This query fetches the actual hobby names from the TblHobbies table in the database,
                     //based on the hobby IDs.
 
@@ -58,7 +62,10 @@ namespace WebApplication1.Controllers
         }
 
 
-        // GET: api/Employees/5
+//tblEmployee.Hobbies: This is a string, likely containing hobby IDs as a comma-separated list(e.g., "1,2,3,4").
+//Split(',') : This method splits the string into an array of substrings, each representing a hobby ID(e.g., ["1", "2", "3", "4"]).
+//Select(int.Parse) : This applies the int.Parse method to each element of the array, converting the strings into integers.The result is a sequence of integers ([1, 2, 3, 4]).
+//ToList(): This converts the sequence into a List<int>.So, the result of this operation will be a list of integers representing the hobby IDs.
         // GET: api/Employees/5
         [HttpGet("{id}")]
         public async Task<ActionResult<TblEmployee>> GetTblEmployee(int id)
@@ -71,7 +78,9 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-
+            //Select is a LINQ (Language Integrated Query) extension method that operates on collections,
+            //such as arrays, lists, or any IEnumerable object.
+            //tblEmployee is the object
             // Manually include hobby names in the response
             if (!string.IsNullOrEmpty(tblEmployee.Hobbies))
             {
@@ -81,8 +90,8 @@ namespace WebApplication1.Controllers
                     .ToListAsync();
                 tblEmployee.Hobbies = string.Join(",",hobbies.Select(h => h.HobbyName));  // Join hobby names as a comma-separated string
             }
-
-            return Ok(tblEmployee);
+            //
+            return Ok(tblEmployee);     
         }
 
 
@@ -169,76 +178,7 @@ namespace WebApplication1.Controllers
             return NoContent();
         }
 
-
-
-
-        // PUT: api/Employees/5
-        //[HttpPut("{id}")]
-        //public async Task<IActionResult> PutTblEmployee(int id, TblEmployee tblEmployee)
-        //{
-        //    if (id != tblEmployee.Id)
-        //    {
-        //        return BadRequest();
-        //    }
-
-        //    var existingEmployee = await _context.TblEmployee
-        //        .Include(e => e.Designation)
-        //        .FirstOrDefaultAsync(e => e.Id == id);
-
-        //    if (existingEmployee == null)
-        //    {
-        //        return NotFound();
-        //    }
-
-        //    // Validate hobbies
-        //    var hobbyIds = tblEmployee.Hobbies.Split(',').Select(id => {
-        //        int parsedId;
-        //        if (int.TryParse(id, out parsedId))
-        //        {
-        //            return parsedId;
-        //        }
-        //        return -1; // Invalid ID marker
-        //    }).ToList();
-
-        //    // Ensure all hobby IDs are valid
-        //    foreach (var hobbyId in hobbyIds)
-        //    {
-        //        if (hobbyId == -1 || await _context.TblHobbies.FindAsync(hobbyId) == null)
-        //        {
-        //            return BadRequest($"Invalid HobbyId: {hobbyId}");
-        //        }
-        //    }
-
-        //    // Update employee details
-        //    existingEmployee.Name = tblEmployee.Name;
-        //    existingEmployee.DesignationID = tblEmployee.DesignationID;
-        //    existingEmployee.Hobbies = tblEmployee.Hobbies;  // Update the Hobbies string
-        //    existingEmployee.Email = tblEmployee.Email;
-        //    existingEmployee.Age = tblEmployee.Age;
-        //    existingEmployee.Doj = tblEmployee.Doj;
-        //    existingEmployee.Gender = tblEmployee.Gender;
-
-        //    try
-        //    {
-        //        await _context.SaveChangesAsync();
-        //    }
-        //    catch (DbUpdateConcurrencyException)
-        //    {
-        //        if (!TblEmployeeExists(id))
-        //        {
-        //            return NotFound();
-        //        }
-        //        else
-        //        {
-        //            throw;
-        //        }
-        //    }
-
-        //    return NoContent();
-        //}
-
-
-
+//async means asynchronous means works in background and wont stop further code or application
         [HttpPost]
         public async Task<ActionResult<TblEmployee>> PostTblEmployee(TblEmployee tblEmployee)
         {
@@ -290,15 +230,36 @@ namespace WebApplication1.Controllers
             return CreatedAtAction("GetTblEmployee", new { id = tblEmployee.Id }, tblEmployee);
         }
 
-
+ //FirstOrDefaultAsync is an asynchronous LINQ method that:
+ // Retrieves the first record that matches the condition(e.Email == loginModel.email).
+ //Returns null if no matching record is found.
+ //_context is likely an instance of your Entity Framework Core database context, used for querying the database.
+ //The JSON body is deserialized into the loginModel parameter because of [FromBody].
+ //Serialization: Converting an object to a format like JSON (object → JSON).
+//Deserialization: Converting JSON data back into an object (JSON → object).
+//[FromBody] tells ASP.NET Core to deserialize the JSON body into a C# object, making it easier for you to access the data.
+        // POST: api/Employees/Login
         [HttpPost("Login")]
-        public async Task<ActionResult> Login([FromBody] LoginModel login)
+        public async Task<ActionResult> Login([FromBody] LoginModel loginModel)
         {
+            // Check if the employee exists in the database
+            var employee = await _context.TblEmployee
+                .FirstOrDefaultAsync(e => e.Email == loginModel.email);
 
+            if (employee == null)
+            {
+                return Unauthorized("Invalid email or password.");
+            }
 
-
-
+            // Verify the password using bcrypt
+            if (!BCrypt.Net.BCrypt.Verify(loginModel.password, employee.password))
+            {
+                return Unauthorized("Invalid email or password.");
+            }
+            // If the credentials are correct, return a success message
+            return Ok(new { Message = "Login successful", EmployeeId = employee.Id });
         }
+
 
 
         // DELETE: api/Employees/5
