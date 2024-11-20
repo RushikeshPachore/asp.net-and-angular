@@ -32,6 +32,7 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 app.UseCors("MyPolicy"); //should be before UseAuthorization and after UseHttpsRedirection
 
+app.UseStaticFiles();
 app.UseAuthorization();
 
 

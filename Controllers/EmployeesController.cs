@@ -20,10 +20,11 @@ namespace WebApplication1.Controllers
     public class EmployeesController : ControllerBase
     {
         private readonly EmplyoeeContext _context;
+        private readonly string _imageUploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
         
         public EmployeesController(EmplyoeeContext context)
         {
-            _context = context; 
+            _context = context;
         }
 
         [HttpGet]
@@ -42,8 +43,8 @@ namespace WebApplication1.Controllers
                     var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();  //Select(int.Parse) part
                                                                                             //converts each of the split
                                                                                             //strings into an integer (the ID of the hobby).
-                    //This query fetches the actual hobby names from the TblHobbies table in the database,
-                    //based on the hobby IDs.
+                                                                                            //This query fetches the actual hobby names from the TblHobbies table in the database,
+                                                                                            //based on the hobby IDs.
 
                     var hobbies = await _context.TblHobbies
                         .Where(h => hobbyIds.Contains(h.HobbyId))
@@ -62,10 +63,10 @@ namespace WebApplication1.Controllers
         }
 
 
-//tblEmployee.Hobbies: This is a string, likely containing hobby IDs as a comma-separated list(e.g., "1,2,3,4").
-//Split(',') : This method splits the string into an array of substrings, each representing a hobby ID(e.g., ["1", "2", "3", "4"]).
-//Select(int.Parse) : This applies the int.Parse method to each element of the array, converting the strings into integers.The result is a sequence of integers ([1, 2, 3, 4]).
-//ToList(): This converts the sequence into a List<int>.So, the result of this operation will be a list of integers representing the hobby IDs.
+        //tblEmployee.Hobbies: This is a string, likely containing hobby IDs as a comma-separated list(e.g., "1,2,3,4").
+        //Split(',') : This method splits the string into an array of substrings, each representing a hobby ID(e.g., ["1", "2", "3", "4"]).
+        //Select(int.Parse) : This applies the int.Parse method to each element of the array, converting the strings into integers.The result is a sequence of integers ([1, 2, 3, 4]).
+        //ToList(): This converts the sequence into a List<int>.So, the result of this operation will be a list of integers representing the hobby IDs.
         // GET: api/Employees/5
         [HttpGet("{id}")]
         public async Task<ActionResult<TblEmployee>> GetTblEmployee(int id)
@@ -88,10 +89,10 @@ namespace WebApplication1.Controllers
                 var hobbies = await _context.TblHobbies
                     .Where(h => hobbyIds.Contains(h.HobbyId))
                     .ToListAsync();
-                tblEmployee.Hobbies = string.Join(",",hobbies.Select(h => h.HobbyName));  // Join hobby names as a comma-separated string
+                tblEmployee.Hobbies = string.Join(",", hobbies.Select(h => h.HobbyName));  // Join hobby names as a comma-separated string
             }
             //
-            return Ok(tblEmployee);     
+            return Ok(tblEmployee);
         }
 
 
@@ -113,7 +114,7 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-            
+
             // Validate hobbies
             if (!string.IsNullOrEmpty(tblEmployee.Hobbies))
             {
@@ -138,10 +139,32 @@ namespace WebApplication1.Controllers
                 // Join valid hobby IDs back into a comma-separated string
                 tblEmployee.Hobbies = string.Join(",", hobbyIds);
             }
+            //else
+            //{
+            //    tblEmployee.Hobbies = tblEmployee.Hobbies; // If no hobbies, set it as an empty string
+            //}
+
+            //IMAGE UPDATE
+            // Update image if provided
+            if (!string.IsNullOrEmpty(tblEmployee.image) && tblEmployee.image.StartsWith("data:image"))
+            {
+                try
+                {
+                    // If image is provided, use the same filename from the existing employee record
+                    tblEmployee.image = await SaveImageAsync(tblEmployee.image, tblEmployee.Name,existingEmployee.image);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, ex.Message);
+                }
+            }
+
             else
             {
-                tblEmployee.Hobbies = ""; // If no hobbies, set it as an empty string
+                tblEmployee.image = existingEmployee.image; // Keep the existing image if no new image is provided
             }
+
+
 
             //update password
             if (!string.IsNullOrEmpty(tblEmployee.password))
@@ -158,6 +181,7 @@ namespace WebApplication1.Controllers
             existingEmployee.Age = tblEmployee.Age;
             existingEmployee.Doj = tblEmployee.Doj;
             existingEmployee.Gender = tblEmployee.Gender;
+            existingEmployee.image = tblEmployee.image;
 
             try
             {
@@ -178,7 +202,69 @@ namespace WebApplication1.Controllers
             return NoContent();
         }
 
-//async means asynchronous means works in background and wont stop further code or application
+
+
+
+        private async Task<string> SaveImageAsync(string base64Image, string employeeName,string existingImage)
+        {
+
+            if (!Directory.Exists("wwwroot/images"))
+            {
+                Directory.CreateDirectory("wwwroot/images");
+            }
+
+            try
+            {
+                // Extract the Base64 data and the image type (e.g., png, jpeg)
+                var imageParts = base64Image.Split(",");
+                if (imageParts.Length != 2)
+                {
+                    throw new Exception("Invalid image format.");
+                }
+
+                string base64Data = imageParts[1];
+                var dataPrefix = imageParts[0];  //metadata , type of image= "image/png"
+
+                // Determine the image type based on the prefix
+                string fileExtension = dataPrefix.Contains("image/jpeg") ? ".jpg" :
+                                       dataPrefix.Contains("image/png") ? ".png" :
+                                       dataPrefix.Contains("image/gif") ? ".gif" :
+                                       dataPrefix.Contains("image/webp") ? ".webp" : null;
+
+                if (fileExtension == null)
+                {
+                    throw new Exception("Unsupported image format.");
+                }
+
+                byte[] imageBytes = Convert.FromBase64String(base64Data);
+
+                // Use existing image name or generate a new one if not updating
+                // Generate a unique filename for new images, or retain the existing filename if provided
+                string fileName = string.IsNullOrEmpty(existingImage)
+                    ? $"{Guid.NewGuid()}{fileExtension}" // Use a GUID for uniqueness
+                    : Path.GetFileName(existingImage);
+                string filePath = Path.Combine("wwwroot/images", fileName);
+
+                // Save the image file in disk with the filename we set.
+
+                await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
+
+                // Return the image URL (accessible via API)
+                return $"/images/{fileName}";
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Image upload failed: {ex.Message}");
+            }
+        }
+
+
+
+
+
+
+
+        //async means asynchronous means works in background and wont stop further code or application
         [HttpPost]
         public async Task<ActionResult<TblEmployee>> PostTblEmployee(TblEmployee tblEmployee)
         {
@@ -217,10 +303,29 @@ namespace WebApplication1.Controllers
                 }
             }
 
+
+            //IMAGE POST
+            if (!string.IsNullOrEmpty(tblEmployee.image) && tblEmployee.image.StartsWith("data:image"))
+            {
+                try
+                {
+                    tblEmployee.image = await SaveImageAsync(tblEmployee.image, tblEmployee.Name,null);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, ex.Message);
+                }
+            }
+            else
+            {
+                tblEmployee.image = null; // Set it to null or a default value
+            }
+
+
             //hashPassword Before saving
             if (!string.IsNullOrEmpty(tblEmployee.password))
             {
-                tblEmployee.password=BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
+                tblEmployee.password = BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
 
             // Add the employee to the database
@@ -230,14 +335,14 @@ namespace WebApplication1.Controllers
             return CreatedAtAction("GetTblEmployee", new { id = tblEmployee.Id }, tblEmployee);
         }
 
- //FirstOrDefaultAsync is an asynchronous LINQ method that:
- // Retrieves the first record that matches the condition(e.Email == loginModel.email).
- //Returns null if no matching record is found.
- //_context is likely an instance of your Entity Framework Core database context, used for querying the database.
- //The JSON body is deserialized into the loginModel parameter because of [FromBody].
- //Serialization: Converting an object to a format like JSON (object → JSON).
-//Deserialization: Converting JSON data back into an object (JSON → object).
-//[FromBody] tells ASP.NET Core to deserialize the JSON body into a C# object, making it easier for you to access the data.
+        //FirstOrDefaultAsync is an asynchronous LINQ method that:
+        // Retrieves the first record that matches the condition(e.Email == loginModel.email).
+        //Returns null if no matching record is found.
+        //_context is likely an instance of your Entity Framework Core database context, used for querying the database.
+        //The JSON body is deserialized into the loginModel parameter because of [FromBody].
+        //Serialization: Converting an object to a format like JSON (object → JSON).
+        //Deserialization: Converting JSON data back into an object (JSON → object).
+        //[FromBody] tells ASP.NET Core to deserialize the JSON body into a C# object, making it easier for you to access the data.
         // POST: api/Employees/Login
         [HttpPost("Login")]
         public async Task<ActionResult> Login([FromBody] LoginModel loginModel)
@@ -256,21 +361,18 @@ namespace WebApplication1.Controllers
             {
                 return Unauthorized(new { success = false, message = "Invalid email or password." });
             }
+
             // If the credentials are correct, return a success message
+            return Ok(new
+            {
+                success = true,
+                userId = employee.Id,
+                userName = $"{employee.Name} {employee.LastName}",
+                image = $"http://localhost:5213/{employee.image}",
+                email = employee.Email,
+                message = "Login Successfully Done"
+            });
 
-
-           
-                return Ok(new
-                {
-                    success=true,
-                    userId=employee.Id,
-                    userName=$"{employee.Name} {employee.LastName}",
-                    email=employee.Email,
-                    message="Login Successfully Done"
-                });
-            
-
-            //return Ok(new { Message = "Login successful", EmployeeId = employee.Id });
         }
 
 

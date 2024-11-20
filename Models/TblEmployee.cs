@@ -10,13 +10,13 @@ namespace WebApplication1.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]  //autogenerate
         public int Id { get; set; }
         [StringLength(50)]
-        public  string Name { get; set; }
+        public  string? Name { get; set; }
         [StringLength(50)]
-        public string LastName { get; set; }
+        public string? LastName { get; set; }
         [StringLength(50)]
         public string? Gender { get; set; }
         public DateTime Doj {  get; set; }
-        public string Email { get; set; }
+        public string? Email { get; set; }
         public int? Age { get; set; }
 
        
@@ -31,10 +31,13 @@ namespace WebApplication1.Models
         [NotMapped]
         public string? DesignationName => Designation?.Designation;  // This will get the Designation name from the related entity
 
-
+        //Hobby Ids are stored in the form of string
         public string? Hobbies {  get; set; }
 
         public string? password {  get; set; }  //"?" means it can be null
+
+
+        public string? image { get; set; }
 
    
 
