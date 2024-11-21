@@ -43,9 +43,8 @@ namespace WebApplication1.Controllers
                     var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();  //Select(int.Parse) part
                                                                                             //converts each of the split
                                                                                             //strings into an integer (the ID of the hobby).
-                                                                                            //This query fetches the actual hobby names from the TblHobbies table in the database,
+                                                                                           //This query fetches the actual hobby names from the TblHobbies table in the database,
                                                                                             //based on the hobby IDs.
-
                     var hobbies = await _context.TblHobbies
                         .Where(h => hobbyIds.Contains(h.HobbyId))
                         .ToListAsync();
@@ -58,16 +57,24 @@ namespace WebApplication1.Controllers
                     employee.Hobbies = "No hobbies Available";  // If no hobbies, display this message
                 }
             }
-
             return Ok(employees);
         }
 
 
+
+        //Select is a LINQ (Language Integrated Query) extension method that operates on collections,
+        //such as arrays, lists, or any IEnumerable object.
+        //tblEmployee is the object
+        // Manually include hobby names in the response
         //tblEmployee.Hobbies: This is a string, likely containing hobby IDs as a comma-separated list(e.g., "1,2,3,4").
         //Split(',') : This method splits the string into an array of substrings, each representing a hobby ID(e.g., ["1", "2", "3", "4"]).
         //Select(int.Parse) : This applies the int.Parse method to each element of the array, converting the strings into integers.The result is a sequence of integers ([1, 2, 3, 4]).
         //ToList(): This converts the sequence into a List<int>.So, the result of this operation will be a list of integers representing the hobby IDs.
         // GET: api/Employees/5
+
+
+
+
         [HttpGet("{id}")]
         public async Task<ActionResult<TblEmployee>> GetTblEmployee(int id)
         {
@@ -79,10 +86,7 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-            //Select is a LINQ (Language Integrated Query) extension method that operates on collections,
-            //such as arrays, lists, or any IEnumerable object.
-            //tblEmployee is the object
-            // Manually include hobby names in the response
+          
             if (!string.IsNullOrEmpty(tblEmployee.Hobbies))
             {
                 var hobbyIds = tblEmployee.Hobbies.Split(',').Select(int.Parse).ToList();
@@ -91,7 +95,7 @@ namespace WebApplication1.Controllers
                     .ToListAsync();
                 tblEmployee.Hobbies = string.Join(",", hobbies.Select(h => h.HobbyName));  // Join hobby names as a comma-separated string
             }
-            //
+
             return Ok(tblEmployee);
         }
 
@@ -105,7 +109,6 @@ namespace WebApplication1.Controllers
             {
                 return BadRequest();
             }
-
             var existingEmployee = await _context.TblEmployee
                 .Include(e => e.Designation)
                 .FirstOrDefaultAsync(e => e.Id == id);
@@ -114,11 +117,32 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
+            //IMAGE UPDATE
+            // Update image if provided
+            if (!string.IsNullOrEmpty(tblEmployee.image) && tblEmployee.image.StartsWith("data:image"))
+            {
+                try
+                {
+                    // If image is provided, use the same filename from the existing employee record
+                    tblEmployee.image = await SaveImageAsync(tblEmployee.image, tblEmployee.Name, null);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, ex.Message);
+                }
+            }
 
-            // Validate hobbies
+            else
+            {
+                tblEmployee.image = existingEmployee.image; // Keep the existing image if no new image is provided
+            }
+
+
+            //Validate hobbies
             if (!string.IsNullOrEmpty(tblEmployee.Hobbies))
             {
-                var hobbyIds = tblEmployee.Hobbies.Split(',').Select(id => {
+                var hobbyIds = tblEmployee.Hobbies.Split(',').Select(id =>
+                {
                     int parsedId;
                     if (int.TryParse(id, out parsedId) && parsedId > 0)
                     {
@@ -139,31 +163,11 @@ namespace WebApplication1.Controllers
                 // Join valid hobby IDs back into a comma-separated string
                 tblEmployee.Hobbies = string.Join(",", hobbyIds);
             }
-            //else
-            //{
-            //    tblEmployee.Hobbies = tblEmployee.Hobbies; // If no hobbies, set it as an empty string
-            //}
-
-            //IMAGE UPDATE
-            // Update image if provided
-            if (!string.IsNullOrEmpty(tblEmployee.image) && tblEmployee.image.StartsWith("data:image"))
-            {
-                try
-                {
-                    // If image is provided, use the same filename from the existing employee record
-                    tblEmployee.image = await SaveImageAsync(tblEmployee.image, tblEmployee.Name,existingEmployee.image);
-                }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, ex.Message);
-                }
-            }
-
             else
             {
-                tblEmployee.image = existingEmployee.image; // Keep the existing image if no new image is provided
+                _context.Entry(tblEmployee).Property(e => e.Hobbies).IsModified = false;
+                //tblEmployee.Hobbies = ""; // If no hobbies, set it as an empty string
             }
-
 
 
             //update password
@@ -171,6 +175,7 @@ namespace WebApplication1.Controllers
             {
                 existingEmployee.password = BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
+
 
             // Update employee details
             existingEmployee.Name = tblEmployee.Name;
@@ -182,7 +187,6 @@ namespace WebApplication1.Controllers
             existingEmployee.Doj = tblEmployee.Doj;
             existingEmployee.Gender = tblEmployee.Gender;
             existingEmployee.image = tblEmployee.image;
-
             try
             {
                 await _context.SaveChangesAsync();
@@ -201,9 +205,6 @@ namespace WebApplication1.Controllers
 
             return NoContent();
         }
-
-
-
 
         private async Task<string> SaveImageAsync(string base64Image, string employeeName,string existingImage)
         {
@@ -241,7 +242,7 @@ namespace WebApplication1.Controllers
                 // Use existing image name or generate a new one if not updating
                 // Generate a unique filename for new images, or retain the existing filename if provided
                 string fileName = string.IsNullOrEmpty(existingImage)
-                    ? $"{Guid.NewGuid()}{fileExtension}" // Use a GUID for uniqueness
+                    ? $"{Guid.NewGuid()}{fileExtension}" // Use a GUID for uniqueness of name
                     : Path.GetFileName(existingImage);
                 string filePath = Path.Combine("wwwroot/images", fileName);
 
@@ -257,9 +258,6 @@ namespace WebApplication1.Controllers
                 throw new Exception($"Image upload failed: {ex.Message}");
             }
         }
-
-
-
 
 
 
@@ -372,7 +370,6 @@ namespace WebApplication1.Controllers
                 email = employee.Email,
                 message = "Login Successfully Done"
             });
-
         }
 
 
