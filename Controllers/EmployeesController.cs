@@ -20,8 +20,7 @@ namespace WebApplication1.Controllers
     public class EmployeesController : ControllerBase
     {
         private readonly EmplyoeeContext _context;
-        private readonly string _imageUploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
-        
+   
         public EmployeesController(EmplyoeeContext context)
         {
             _context = context;
@@ -43,14 +42,16 @@ namespace WebApplication1.Controllers
                     var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();  //Select(int.Parse) part
                                                                                             //converts each of the split
                                                                                             //strings into an integer (the ID of the hobby).
-                                                                                           //This query fetches the actual hobby names from the TblHobbies table in the database,
-                                                                                            //based on the hobby IDs.
+                    //This query fetches the actual hobby names from the TblHobbies table in the database,
+                    //based on the hobby IDs.                                                                          
                     var hobbies = await _context.TblHobbies
                         .Where(h => hobbyIds.Contains(h.HobbyId))
                         .ToListAsync();
 
                     // Join the hobby names as a comma-separated string
                     employee.Hobbies = string.Join(",", hobbies.Select(h => h.HobbyName));
+                  
+
                 }
                 else
                 {
@@ -80,7 +81,7 @@ namespace WebApplication1.Controllers
         {
             var tblEmployee = await _context.TblEmployee
                 .Include(e => e.Designation) // Include Designation details
-                .FirstOrDefaultAsync(e => e.Id == id);
+                .FirstOrDefaultAsync(e => e.Id == id); //for getting first id which is seen
 
             if (tblEmployee == null)
             {
@@ -117,25 +118,10 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-            //IMAGE UPDATE
+            //
+            //UPDATE
             // Update image if provided
-            if (!string.IsNullOrEmpty(tblEmployee.image) && tblEmployee.image.StartsWith("data:image"))
-            {
-                try
-                {
-                    // If image is provided, use the same filename from the existing employee record
-                    tblEmployee.image = await SaveImageAsync(tblEmployee.image, tblEmployee.Name, null);
-                }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, ex.Message);
-                }
-            }
-
-            else
-            {
-                tblEmployee.image = existingEmployee.image; // Keep the existing image if no new image is provided
-            }
+          
 
 
             //Validate hobbies
@@ -160,6 +146,21 @@ namespace WebApplication1.Controllers
                     }
                 }
 
+
+                //TBLHOBBYEMP
+                var existingHobbies = _context.TblEmployeeHobbies.Where(eh => eh.EmpId == id);
+                _context.TblEmployeeHobbies.RemoveRange(existingHobbies);
+
+                foreach (var hobId in hobbyIds)
+                {
+                    _context.TblEmployeeHobbies.Add(new TblEmployeeHobby
+                    {
+                        EmpId = id,
+                        HobId = hobId
+                    });
+
+                }
+
                 // Join valid hobby IDs back into a comma-separated string
                 tblEmployee.Hobbies = string.Join(",", hobbyIds);
             }
@@ -170,12 +171,25 @@ namespace WebApplication1.Controllers
             }
 
 
+
+
+
+            if (!string.IsNullOrEmpty(tblEmployee.Email))
+            {
+                var existingEmail = await _context.TblEmployee.FirstOrDefaultAsync(e => e.Email == tblEmployee.Email && e.Id != tblEmployee.Id);
+
+                if (existingEmail !=null)
+                {
+                    return BadRequest(new { message = "The email is already in use by another employee."});
+                }
+            }
+
+
             //update password
             if (!string.IsNullOrEmpty(tblEmployee.password))
             {
                 existingEmployee.password = BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
-
 
             // Update employee details
             existingEmployee.Name = tblEmployee.Name;
@@ -186,7 +200,8 @@ namespace WebApplication1.Controllers
             existingEmployee.Age = tblEmployee.Age;
             existingEmployee.Doj = tblEmployee.Doj;
             existingEmployee.Gender = tblEmployee.Gender;
-            existingEmployee.image = tblEmployee.image;
+           
+
             try
             {
                 await _context.SaveChangesAsync();
@@ -202,64 +217,10 @@ namespace WebApplication1.Controllers
                     throw;
                 }
             }
-
             return NoContent();
         }
 
-        private async Task<string> SaveImageAsync(string base64Image, string employeeName,string existingImage)
-        {
-
-            if (!Directory.Exists("wwwroot/images"))
-            {
-                Directory.CreateDirectory("wwwroot/images");
-            }
-
-            try
-            {
-                // Extract the Base64 data and the image type (e.g., png, jpeg)
-                var imageParts = base64Image.Split(",");
-                if (imageParts.Length != 2)
-                {
-                    throw new Exception("Invalid image format.");
-                }
-
-                string base64Data = imageParts[1];
-                var dataPrefix = imageParts[0];  //metadata , type of image= "image/png"
-
-                // Determine the image type based on the prefix
-                string fileExtension = dataPrefix.Contains("image/jpeg") ? ".jpg" :
-                                       dataPrefix.Contains("image/png") ? ".png" :
-                                       dataPrefix.Contains("image/gif") ? ".gif" :
-                                       dataPrefix.Contains("image/webp") ? ".webp" : null;
-
-                if (fileExtension == null)
-                {
-                    throw new Exception("Unsupported image format.");
-                }
-
-                byte[] imageBytes = Convert.FromBase64String(base64Data);
-
-                // Use existing image name or generate a new one if not updating
-                // Generate a unique filename for new images, or retain the existing filename if provided
-                string fileName = string.IsNullOrEmpty(existingImage)
-                    ? $"{Guid.NewGuid()}{fileExtension}" // Use a GUID for uniqueness of name
-                    : Path.GetFileName(existingImage);
-                string filePath = Path.Combine("wwwroot/images", fileName);
-
-                // Save the image file in disk with the filename we set.
-
-                await System.IO.File.WriteAllBytesAsync(filePath, imageBytes);
-
-                // Return the image URL (accessible via API)
-                return $"/images/{fileName}";
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Image upload failed: {ex.Message}");
-            }
-        }
-
-
+       
 
 
         //async means asynchronous means works in background and wont stop further code or application
@@ -291,7 +252,7 @@ namespace WebApplication1.Controllers
                 }
                 return -1; // Invalid ID marker
             }).ToList();
-
+            
             // Ensure all hobby IDs are valid
             foreach (var hobbyId in hobbyIds)
             {
@@ -303,22 +264,19 @@ namespace WebApplication1.Controllers
 
 
             //IMAGE POST
-            if (!string.IsNullOrEmpty(tblEmployee.image) && tblEmployee.image.StartsWith("data:image"))
-            {
-                try
-                {
-                    tblEmployee.image = await SaveImageAsync(tblEmployee.image, tblEmployee.Name,null);
-                }
-                catch (Exception ex)
-                {
-                    return StatusCode(500, ex.Message);
-                }
-            }
-            else
-            {
-                tblEmployee.image = null; // Set it to null or a default value
-            }
+          
 
+
+            // POST duplicate email check. e.email means from table and tblemployee.email means entered now
+            if (!string.IsNullOrEmpty(tblEmployee.Email))
+            {
+                var existingEmail = await _context.TblEmployee.FirstOrDefaultAsync(e => e.Email == tblEmployee.Email && e.Id != tblEmployee.Id);
+
+                if (existingEmail != null)
+                {
+                    return BadRequest(new { message = "The email is already in use by another employee." });
+                }
+            }
 
             //hashPassword Before saving
             if (!string.IsNullOrEmpty(tblEmployee.password))
@@ -326,12 +284,27 @@ namespace WebApplication1.Controllers
                 tblEmployee.password = BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
 
-            // Add the employee to the database
+
+            // Add the employee to the database. First saving employee, so we get the emp ID and then we can save in TblEmployeeHobbies
             _context.TblEmployee.Add(tblEmployee);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetTblEmployee", new { id = tblEmployee.Id }, tblEmployee);
+
+            //// Add entries to TblEmployeeHobby
+            
+                var employeeHobbies = hobbyIds.Select(hobbyId => new TblEmployeeHobby
+                {
+                    EmpId = tblEmployee.Id,
+                    HobId = hobbyId
+                });
+
+                await _context.TblEmployeeHobbies.AddRangeAsync(employeeHobbies);
+            
+            await _context.SaveChangesAsync();
+            return Ok( new { id = tblEmployee.Id });
         }
+
+
 
         //FirstOrDefaultAsync is an asynchronous LINQ method that:
         // Retrieves the first record that matches the condition(e.Email == loginModel.email).
@@ -346,6 +319,7 @@ namespace WebApplication1.Controllers
         public async Task<ActionResult> Login([FromBody] LoginModel loginModel)
         {
             // Check if the employee exists in the database
+            //e.email means existing in TblEmployee & loginModel.email is while login
             var employee = await _context.TblEmployee
                 .FirstOrDefaultAsync(e => e.Email == loginModel.email);
 
@@ -366,7 +340,6 @@ namespace WebApplication1.Controllers
                 success = true,
                 userId = employee.Id,
                 userName = $"{employee.Name} {employee.LastName}",
-                image = $"http://localhost:5213/{employee.image}",
                 email = employee.Email,
                 message = "Login Successfully Done"
             });
@@ -383,10 +356,8 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-
             _context.TblEmployee.Remove(tblEmployee);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
         private bool TblEmployeeExists(int id)

@@ -75,9 +75,6 @@ namespace WebApplication1.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("image")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("password")
                         .HasColumnType("nvarchar(max)");
 
@@ -86,6 +83,29 @@ namespace WebApplication1.Migrations
                     b.HasIndex("DesignationID");
 
                     b.ToTable("TblEmployee");
+                });
+
+            modelBuilder.Entity("WebApplication1.Models.TblEmployeeHobby", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmpId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("HobId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpId");
+
+                    b.HasIndex("HobId");
+
+                    b.ToTable("TblEmployeeHobbies");
                 });
 
             modelBuilder.Entity("WebApplication1.Models.TblHobbies", b =>
@@ -106,6 +126,28 @@ namespace WebApplication1.Migrations
                     b.ToTable("TblHobbies");
                 });
 
+            modelBuilder.Entity("WebApplication1.Models.TblImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MultiImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("TblImage");
+                });
+
             modelBuilder.Entity("WebApplication1.Models.TblEmployee", b =>
                 {
                     b.HasOne("WebApplication1.Models.TblDesignation", "Designation")
@@ -113,6 +155,43 @@ namespace WebApplication1.Migrations
                         .HasForeignKey("DesignationID");
 
                     b.Navigation("Designation");
+                });
+
+            modelBuilder.Entity("WebApplication1.Models.TblEmployeeHobby", b =>
+                {
+                    b.HasOne("WebApplication1.Models.TblEmployee", "Employees")
+                        .WithMany("EmployeeHobbies")
+                        .HasForeignKey("EmpId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebApplication1.Models.TblHobbies", "Hobby")
+                        .WithMany()
+                        .HasForeignKey("HobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employees");
+
+                    b.Navigation("Hobby");
+                });
+
+            modelBuilder.Entity("WebApplication1.Models.TblImage", b =>
+                {
+                    b.HasOne("WebApplication1.Models.TblEmployee", "Employee")
+                        .WithMany("Images")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("WebApplication1.Models.TblEmployee", b =>
+                {
+                    b.Navigation("EmployeeHobbies");
+
+                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }
