@@ -1,11 +1,13 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 using WebApplication1.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -17,6 +19,24 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
+
+// Added JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true, //token was issued by trusted authority, issuer is who generated  toke i.e server
+        ValidateAudience = true, // audience represents the recipient of the token (e.g., your API).The audience is usually a string (e.g., "JwtAudience") defined in the appsettings.json file.
+        ValidateLifetime = true, //checks if the token is expired based on the exp (expiry) claim.
+        ValidateIssuerSigningKey = true, //Ensures the token's signature is valid and matches the secret or key used to sign it.
+        ValidIssuer = builder.Configuration["Jwt:Issuer"], //specifies expected issuer of token. value (Jwt:Issuer) is retrieved from the appsettings.json file.
+        ValidAudience = builder.Configuration["Jwt:Audience"],//
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])) //Defines the key used to validate the token's signature.
+    
+    };
+});
+//JWT Authorization
+builder.Services.AddAuthorization();
+
 //connecting path from here //added
 builder.Services.AddDbContext<EmplyoeeContext>(db =>
 db.UseSqlServer(builder.Configuration.GetConnectionString("ConnEmp"))); //connemp is in application.json
@@ -27,6 +47,11 @@ builder.Services.AddCors(cors => cors.AddPolicy("MyPolicy", builder =>
     builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
 }));
 var app = builder.Build();
+
+
+//Added for JWT user authentication
+app.UseAuthentication();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -40,9 +65,8 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 app.UseCors("MyPolicy"); //should be before UseAuthorization and after UseHttpsRedirection
 
-app.UseStaticFiles();
 app.UseAuthorization();
-
+app.UseStaticFiles();
 
 app.MapControllers();
 

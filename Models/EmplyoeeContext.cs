@@ -10,15 +10,11 @@ namespace WebApplication1.Models
 
         public DbSet<TblHobbies> TblHobbies { get; set; }
 
-
-
-
         public DbSet<TblImage> TblImage { get; set; }
 
         public DbSet<TblDesignation> TblDesignation { get; set; }
 
         public DbSet<TblEmployeeHobby> TblEmployeeHobbies { get; set; }
-
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -30,7 +26,7 @@ namespace WebApplication1.Models
             modelBuilder.Entity<TblImage>()
                 .HasOne(img => img.Employee)    // TblImage has one Employee Navigation property
                 .WithMany(emp => emp.Images)    // Employee has many images
-                .HasForeignKey(img => img.EmployeeId)  // Foreign key on EmployeeId
+                .HasForeignKey(img => img.EmployeeId)  // Foreign key on EmployeeId in TblImage
                 .OnDelete(DeleteBehavior.Cascade);    // Optional: Set the delete behavior (cascade or restrict)
 
 

@@ -88,21 +88,26 @@ namespace WebApplication1.Controllers
         [HttpGet("Employee/{employeeId}")]
         public async Task<IActionResult> GetImagesByEmployee(int employeeId)
         {
+            if (employeeId <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "invalid employeeee Idd"
+                });
+            }
             if (!_context.TblEmployee.Any(e => e.Id == employeeId))
             {
                 return NotFound(new { message = "Employee not found." });
             }
 
-            var images = await _context.TblImage
-                .Where(i => i.EmployeeId == employeeId)
-                .Select(i =>  i.MultiImage)
+            var images = await _context.TblImage.Where( i=>i.EmployeeId==employeeId).Select(i=>new 
+                {
+                    id=i.Id,
+                    url = i.MultiImage.StartsWith("/images/") ? i.MultiImage : $"/images/{i.MultiImage}"
+                })
                 .ToListAsync();
-
             return Ok(images);
         }
-
-
-
 
 
 
@@ -131,7 +136,6 @@ namespace WebApplication1.Controllers
                         {
                             System.IO.File.Delete(filePath);
                         }
-
                         // Remove the image record from the database
                         _context.TblImage.Remove(image);
                     }

@@ -36,6 +36,8 @@ namespace WebApplication1.Models
 
         public string? password {  get; set; }  //"?" means it can be null
 
+        public string? Role { get; set; }
+
 
         public ICollection<TblEmployeeHobby>? EmployeeHobbies { get; set; }
         public ICollection<TblImage>? Images { get; set; }

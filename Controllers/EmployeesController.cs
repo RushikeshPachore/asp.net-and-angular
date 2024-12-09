@@ -12,17 +12,24 @@ using NuGet.Packaging.Signing;
 using WebApplication1.Models;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+ 
     public class EmployeesController : ControllerBase
     {
         private readonly EmplyoeeContext _context;
+        private readonly IConfiguration configuration;
    
-        public EmployeesController(EmplyoeeContext context)
+        public EmployeesController(EmplyoeeContext context, IConfiguration configuration)
         {
+            this.configuration = configuration;
             _context = context;
         }
 
@@ -41,7 +48,7 @@ namespace WebApplication1.Controllers
                     // Split the comma-separated hobby IDs. int.Parse=> "1" will be converted to the integer 1.
                     var hobbyIds = employee.Hobbies.Split(',').Select(int.Parse).ToList();  //Select(int.Parse) part
                                                                                             //converts each of the split
-                                                                                            //strings into an integer (the ID of the hobby).
+                                                                                           //strings into an integer (the ID of the hobby).
                     //This query fetches the actual hobby names from the TblHobbies table in the database,
                     //based on the hobby IDs.                                                                          
                     var hobbies = await _context.TblHobbies
@@ -50,8 +57,6 @@ namespace WebApplication1.Controllers
 
                     // Join the hobby names as a comma-separated string
                     employee.Hobbies = string.Join(",", hobbies.Select(h => h.HobbyName));
-                  
-
                 }
                 else
                 {
@@ -60,8 +65,6 @@ namespace WebApplication1.Controllers
             }
             return Ok(employees);
         }
-
-
 
         //Select is a LINQ (Language Integrated Query) extension method that operates on collections,
         //such as arrays, lists, or any IEnumerable object.
@@ -72,8 +75,6 @@ namespace WebApplication1.Controllers
         //Select(int.Parse) : This applies the int.Parse method to each element of the array, converting the strings into integers.The result is a sequence of integers ([1, 2, 3, 4]).
         //ToList(): This converts the sequence into a List<int>.So, the result of this operation will be a list of integers representing the hobby IDs.
         // GET: api/Employees/5
-
-
 
 
         [HttpGet("{id}")]
@@ -118,12 +119,7 @@ namespace WebApplication1.Controllers
             {
                 return NotFound();
             }
-            //
-            //UPDATE
             // Update image if provided
-          
-
-
             //Validate hobbies
             if (!string.IsNullOrEmpty(tblEmployee.Hobbies))
             {
@@ -171,9 +167,7 @@ namespace WebApplication1.Controllers
             }
 
 
-
-
-
+            //for duplicate emails
             if (!string.IsNullOrEmpty(tblEmployee.Email))
             {
                 var existingEmail = await _context.TblEmployee.FirstOrDefaultAsync(e => e.Email == tblEmployee.Email && e.Id != tblEmployee.Id);
@@ -220,9 +214,9 @@ namespace WebApplication1.Controllers
             return NoContent();
         }
 
-       
 
 
+        [Authorize]
         //async means asynchronous means works in background and wont stop further code or application
         [HttpPost]
         public async Task<ActionResult<TblEmployee>> PostTblEmployee(TblEmployee tblEmployee)
@@ -230,11 +224,6 @@ namespace WebApplication1.Controllers
             if (tblEmployee == null)
             {
                 return BadRequest("Employee data is required.");
-            }
-
-            if (tblEmployee.DesignationID == 0 || string.IsNullOrEmpty(tblEmployee.Hobbies))
-            {
-                return BadRequest("Designation and Hobbies are required.");
             }
 
             var designation = await _context.TblDesignation.FindAsync(tblEmployee.DesignationID);
@@ -262,11 +251,7 @@ namespace WebApplication1.Controllers
                 }
             }
 
-
-            //IMAGE POST
-          
-
-
+         
             // POST duplicate email check. e.email means from table and tblemployee.email means entered now
             if (!string.IsNullOrEmpty(tblEmployee.Email))
             {
@@ -283,15 +268,13 @@ namespace WebApplication1.Controllers
             {
                 tblEmployee.password = BCrypt.Net.BCrypt.HashPassword(tblEmployee.password);
             }
-
-
             // Add the employee to the database. First saving employee, so we get the emp ID and then we can save in TblEmployeeHobbies
             _context.TblEmployee.Add(tblEmployee);
             await _context.SaveChangesAsync();
+            //adding to tblEmployee to get id of employee , so that can be used for TblEmployeeHobby insertion
 
 
-            //// Add entries to TblEmployeeHobby
-            
+            //// Add entries to TblEmployeeHobby            
                 var employeeHobbies = hobbyIds.Select(hobbyId => new TblEmployeeHobby
                 {
                     EmpId = tblEmployee.Id,
@@ -315,39 +298,90 @@ namespace WebApplication1.Controllers
         //Deserialization: Converting JSON data back into an object (JSON → object).
         //[FromBody] tells ASP.NET Core to deserialize the JSON body into a C# object, making it easier for you to access the data.
         // POST: api/Employees/Login
-        [HttpPost("Login")]
-        public async Task<ActionResult> Login([FromBody] LoginModel loginModel)
-        {
-            // Check if the employee exists in the database
-            //e.email means existing in TblEmployee & loginModel.email is while login
-            var employee = await _context.TblEmployee
-                .FirstOrDefaultAsync(e => e.Email == loginModel.email);
+        //[HttpPost("Login")]
+        //public async Task<ActionResult> Login([FromBody] LoginModel loginModel)
+        //{
+        //    // Check if the employee exists in the database
+        //    //e.email means existing in TblEmployee & loginModel.email is while login
+        //    var employee = await _context.TblEmployee
+        //        .FirstOrDefaultAsync(e => e.Email == loginModel.email);
 
-            if (employee == null)
-            {
-                return Unauthorized("Invalid email or password.");
-            }
+        //    if (employee == null)
+        //    {
+        //        return Unauthorized("Invalid email or password.");
+        //    }
 
-            // Verify the password using bcrypt
-            if (!BCrypt.Net.BCrypt.Verify(loginModel.password, employee.password))
-            {
-                return Unauthorized(new { success = false, message = "Invalid email or password." });
-            }
+        //    // Verify the password using bcrypt
+        //    if (!BCrypt.Net.BCrypt.Verify(loginModel.password, employee.password))
+        //    {
+        //        return Unauthorized(new { success = false, message = "Invalid email or password." });
+        //    }
 
-            // If the credentials are correct, return a success message
-            return Ok(new
-            {
-                success = true,
-                userId = employee.Id,
-                userName = $"{employee.Name} {employee.LastName}",
-                email = employee.Email,
-                message = "Login Successfully Done"
-            });
-        }
+        //    // If the credentials are correct, return a success message
+        //    return Ok(new
+        //    {
+        //        success = true,
+        //        userId = employee.Id,
+        //        userName = $"{employee.Name} {employee.LastName}",
+        //        email = employee.Email,
+        //        message = "Login Successfully Done"
+        //    });
+        //}
 
 
+        //[HttpPost("Login")]
+        //public async  Task<IActionResult> Login (LoginModel loginDto)
+        //{
+        //    var user=await _context.TblEmployee.FirstOrDefaultAsync(x=> x.Email == loginDto.email );
+
+
+        //    if (!BCrypt.Net.BCrypt.Verify(loginDto.password, user.password))
+        //    {
+        //        return Unauthorized(new { success = false, message = "Invalid email or password." });
+        //    }
+
+
+        //    if (user != null)
+        //    {
+        //        var claims = new[]
+        //        {
+        //            new Claim(JwtRegisteredClaimNames.Sub, configuration["Jwt:Subject"]),
+        //            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        //            new Claim("UserId", user.Id.ToString()),
+        //            new Claim("UserName", user.Name.ToString()),
+        //            new Claim("Email",user.Email.ToString())
+        //        };
+
+        //        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
+        //        var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        //        //HmacSha256 or 512 signature algorithm on which basis u will try to generate the token
+
+
+        //        //generate the token here
+        //        var token = new JwtSecurityToken(
+        //            configuration["Jwt:Issuer"],
+        //            configuration["Jwt:Audience"],                                                          
+        //            claims,
+        //            expires: DateTime.UtcNow.AddMinutes(60),
+        //            signingCredentials: signIn
+        //            );
+
+        //        string tokenValue = new JwtSecurityTokenHandler().WriteToken(token);
+        //        //expires is usd to set time for how much time token will be available
+        //        return Ok(new
+        //        {
+        //            Token = tokenValue,
+        //            User = user
+        //        });
+        //    }
+        //    return NoContent();
+
+        //}
 
         // DELETE: api/Employees/5
+
+
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteTblEmployee(int id)
         {
