@@ -34,13 +34,19 @@ namespace WebApplication1.Models
         //Hobby Ids are stored in the form of string
         public string? Hobbies {  get; set; }
 
+
         public string? password {  get; set; }  //"?" means it can be null
 
-        public string? Role { get; set; }
-
+   
 
         public ICollection<TblEmployeeHobby>? EmployeeHobbies { get; set; }
         public ICollection<TblImage>? Images { get; set; }
+
+
+        public virtual ICollection<TblAnswer>? Answers { get; set; }  // One-to-many relationship
+
+
+ 
 
 
 

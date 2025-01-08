@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplication1.Models;
 
@@ -11,9 +12,11 @@ using WebApplication1.Models;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(EmplyoeeContext))]
-    partial class EmplyoeeContextModelSnapshot : ModelSnapshot
+    [Migration("20250108141844_quesremove")]
+    partial class quesremove
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -140,12 +143,17 @@ namespace WebApplication1.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("TblQuestionId")
+                        .HasColumnType("int");
+
                     b.Property<string>("password")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DesignationID");
+
+                    b.HasIndex("TblQuestionId");
 
                     b.ToTable("TblEmployee");
                 });
@@ -267,6 +275,10 @@ namespace WebApplication1.Migrations
                         .WithMany()
                         .HasForeignKey("DesignationID");
 
+                    b.HasOne("WebApplication1.Models.TblQuestion", null)
+                        .WithMany("Employees")
+                        .HasForeignKey("TblQuestionId");
+
                     b.Navigation("Designation");
                 });
 
@@ -312,6 +324,11 @@ namespace WebApplication1.Migrations
                     b.Navigation("EmployeeHobbies");
 
                     b.Navigation("Images");
+                });
+
+            modelBuilder.Entity("WebApplication1.Models.TblQuestion", b =>
+                {
+                    b.Navigation("Employees");
                 });
 #pragma warning restore 612, 618
         }

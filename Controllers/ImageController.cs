@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using WebApplication1.Models;
+using WebApplication1.Repository.Interface;
 
 namespace WebApplication1.Controllers
 {
@@ -14,75 +16,24 @@ namespace WebApplication1.Controllers
     {
         private readonly EmplyoeeContext _context;
         private readonly IWebHostEnvironment _environment;
-        private object _hostingEnvironment;
+        private readonly IEmployeeRepo RepoObject;
 
-        public ImageController(EmplyoeeContext context, IWebHostEnvironment environment)
+        public ImageController(EmplyoeeContext context, IWebHostEnvironment environment, IEmployeeRepo RepoObject)
         {
             _context = context;
             _environment = environment;
+            this.RepoObject = RepoObject;
         }
 
         // POST: api/Image/Upload
+        //using repository here
         [HttpPost("Upload")]
         public async Task<IActionResult> UploadImages([FromForm] int employeeId, [FromForm] List<IFormFile> images)
         {
-
-            try
-            {
-                if (!_context.TblEmployee.Any(e => e.Id == employeeId))
-                {
-                    return NotFound(new { message = "Employee not found." });
-                }
-
-                if (images == null || images.Count == 0)
-                {
-                    return BadRequest(new { message = "No images provided." });
-                }
-
-                var uploadedImages = new List<TblImage>();
-
-                foreach (var image in images)
-                {
-                    if (image.Length > 0)
-                    {
-                        var uploadsFolder = Path.Combine(_environment.WebRootPath, "images");
-                        if (!Directory.Exists(uploadsFolder))
-                        {
-                            Directory.CreateDirectory(uploadsFolder);
-                        }
-
-                        var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        // Save the file
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await image.CopyToAsync(stream);
-                        }
-
-                        // Save image data in the database
-                        var tblImage = new TblImage
-                        {
-                            EmployeeId = employeeId,
-                            MultiImage = $"/images/{uniqueFileName}"
-                        };
-
-                        uploadedImages.Add(tblImage);
-                    }
-                }
-
-                await _context.TblImage.AddRangeAsync(uploadedImages);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { message = "Images uploaded successfully.", images = uploadedImages });
-            }
-
-            catch(Exception ex)
-            {
-                // Log the exception (use ILogger or any logging framework)
-                return StatusCode(500, new { message = "An error occurred while uploading images.", error = ex.Message });
-            }
+            return await RepoObject.UploadImages(employeeId, images);
         }
+
+
 
         // GET: api/Image/Employee/{employeeId}
         [HttpGet("Employee/{employeeId}")]
@@ -110,7 +61,7 @@ namespace WebApplication1.Controllers
         }
 
 
-
+       
         [HttpPut("UpdateImages/{employeeId}")]
         public async Task<IActionResult> UpdateImages(int employeeId, [FromForm] List<IFormFile> newImages, [FromForm] List<int> deletedImageIds)
         {
@@ -176,11 +127,10 @@ namespace WebApplication1.Controllers
                     }
                 }
             }
-
             // Add the new images to the database
             if (uploadedImages.Any())
             {
-                await _context.TblImage.AddRangeAsync(uploadedImages);
+               await _context.TblImage.AddRangeAsync(uploadedImages);
             }
 
             await _context.SaveChangesAsync();
@@ -227,7 +177,7 @@ namespace WebApplication1.Controllers
         }
 
 
-
+     
         // DELETE: api/Image/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteImage(int id)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace WebApplication1.Models
 {
@@ -10,10 +11,9 @@ namespace WebApplication1.Models
         [ForeignKey("Employee")] //this Employee should match the navigation property variable down there
         public int EmployeeId { get; set; }
 
-        public string MultiImage { get; set; }
+        public string? MultiImage { get; set; }
 
 
-        
         public virtual TblEmployee Employee { get; set; } //navigate the employee table through this naigation property
     }
 }

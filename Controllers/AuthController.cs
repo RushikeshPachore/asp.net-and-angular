@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -6,8 +6,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using WebApplication1.Models;
-
-using Microsoft.AspNetCore.Authorization;
 
 namespace WebApplication1.Controllers
 {
@@ -18,7 +16,7 @@ namespace WebApplication1.Controllers
         private readonly EmplyoeeContext _context;
         private readonly IConfiguration configuration;
 
-        
+
         public AuthController(EmplyoeeContext context, IConfiguration configuration)
         {
             _context = context;
@@ -30,12 +28,15 @@ namespace WebApplication1.Controllers
         public async Task<IActionResult> Login(LoginModel loginDto)
         {
             var user = await _context.TblEmployee.FirstOrDefaultAsync(x => x.Email == loginDto.email);
+       
 
             if (user==null || !BCrypt.Net.BCrypt.Verify(loginDto.password, user.password))
             {
                 return Unauthorized(new { success = false, message = "Invalid email or password." });
             }
-            
+
+
+      
             //Calling method for creating token if authenticated up!!
             var token = GenerateJwtToken(user);
 
@@ -43,7 +44,7 @@ namespace WebApplication1.Controllers
             {
                 success = true,
                 token,
-                user 
+                user
             });
         }
 
@@ -57,7 +58,7 @@ namespace WebApplication1.Controllers
         new Claim("userId", user.Id.ToString()),
         new Claim("userName", user.Name),
         new Claim("email", user.Email),
-        new Claim("image",user.Images.ToString())
+       
         };
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
             var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplication1.Models;
 
@@ -11,9 +12,11 @@ using WebApplication1.Models;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(EmplyoeeContext))]
-    partial class EmplyoeeContextModelSnapshot : ModelSnapshot
+    [Migration("20250106094254_remove3")]
+    partial class remove3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -75,14 +78,9 @@ namespace WebApplication1.Migrations
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId");
-
-                    b.HasIndex("QuestionId");
 
                     b.ToTable("TblAnswer");
                 });
@@ -245,20 +243,12 @@ namespace WebApplication1.Migrations
             modelBuilder.Entity("WebApplication1.Models.TblAnswer", b =>
                 {
                     b.HasOne("WebApplication1.Models.TblEmployee", "Employee")
-                        .WithMany("Answers")
+                        .WithMany()
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("WebApplication1.Models.TblQuestion", "Question")
-                        .WithMany()
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Employee");
-
-                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("WebApplication1.Models.TblEmployee", b =>
@@ -307,8 +297,6 @@ namespace WebApplication1.Migrations
 
             modelBuilder.Entity("WebApplication1.Models.TblEmployee", b =>
                 {
-                    b.Navigation("Answers");
-
                     b.Navigation("EmployeeHobbies");
 
                     b.Navigation("Images");

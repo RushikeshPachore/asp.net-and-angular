@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApplication1.Models;
 
@@ -11,9 +12,11 @@ using WebApplication1.Models;
 namespace WebApplication1.Migrations
 {
     [DbContext(typeof(EmplyoeeContext))]
-    partial class EmplyoeeContextModelSnapshot : ModelSnapshot
+    [Migration("20241210114529_repository")]
+    partial class repository
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,71 +24,6 @@ namespace WebApplication1.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("WebApplication1.Models.Category", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Categories")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Category");
-                });
-
-            modelBuilder.Entity("WebApplication1.Models.SubCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SubCategories")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.ToTable("SubCategory");
-                });
-
-            modelBuilder.Entity("WebApplication1.Models.TblAnswer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Answer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("EmployeeId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("QuestionId");
-
-                    b.ToTable("TblAnswer");
-                });
 
             modelBuilder.Entity("WebApplication1.Models.TblDesignation", b =>
                 {
@@ -203,6 +141,7 @@ namespace WebApplication1.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("MultiImage")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -210,55 +149,6 @@ namespace WebApplication1.Migrations
                     b.HasIndex("EmployeeId");
 
                     b.ToTable("TblImage");
-                });
-
-            modelBuilder.Entity("WebApplication1.Models.TblQuestion", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("FemaleQues")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MaleQues")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("TblQuestion");
-                });
-
-            modelBuilder.Entity("WebApplication1.Models.SubCategory", b =>
-                {
-                    b.HasOne("WebApplication1.Models.Category", "Category")
-                        .WithMany("SubCategories")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("WebApplication1.Models.TblAnswer", b =>
-                {
-                    b.HasOne("WebApplication1.Models.TblEmployee", "Employee")
-                        .WithMany("Answers")
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("WebApplication1.Models.TblQuestion", "Question")
-                        .WithMany()
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Employee");
-
-                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("WebApplication1.Models.TblEmployee", b =>
@@ -300,15 +190,8 @@ namespace WebApplication1.Migrations
                     b.Navigation("Employee");
                 });
 
-            modelBuilder.Entity("WebApplication1.Models.Category", b =>
-                {
-                    b.Navigation("SubCategories");
-                });
-
             modelBuilder.Entity("WebApplication1.Models.TblEmployee", b =>
                 {
-                    b.Navigation("Answers");
-
                     b.Navigation("EmployeeHobbies");
 
                     b.Navigation("Images");

@@ -4,8 +4,22 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using WebApplication1.Models;
+using WebApplication1.Repository.Interface;
+using WebApplication1.Repository.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//Added for repository using in Api
+builder.Services.AddScoped<IEmployeeRepo, EmployeeRepository>();
+
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
+
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -19,7 +33,6 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
-
 // Added JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -29,11 +42,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateLifetime = true, //checks if the token is expired based on the exp (expiry) claim.
         ValidateIssuerSigningKey = true, //Ensures the token's signature is valid and matches the secret or key used to sign it.
         ValidIssuer = builder.Configuration["Jwt:Issuer"], //specifies expected issuer of token. value (Jwt:Issuer) is retrieved from the appsettings.json file.
-        ValidAudience = builder.Configuration["Jwt:Audience"],//
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])) //Defines the key used to validate the token's signature.
-    
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])) //Defines the key used to validate the token's signature. 
     };
 });
+
+
 //JWT Authorization
 builder.Services.AddAuthorization();
 
@@ -42,10 +56,11 @@ builder.Services.AddDbContext<EmplyoeeContext>(db =>
 db.UseSqlServer(builder.Configuration.GetConnectionString("ConnEmp"))); //connemp is in application.json
 
 //added
-builder.Services.AddCors(cors => cors.AddPolicy("MyPolicy", builder =>
+builder.Services.AddCors(cors => cors.AddPolicy("MyPolicy", builder=>
 {
-    builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
 }));
+
 var app = builder.Build();
 
 
@@ -66,6 +81,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("MyPolicy"); //should be before UseAuthorization and after UseHttpsRedirection
 
 app.UseAuthorization();
+//for images
 app.UseStaticFiles();
 
 app.MapControllers();
